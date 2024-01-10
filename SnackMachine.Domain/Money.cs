@@ -65,6 +65,17 @@ public sealed class Money : ValueObject<Money>
             money1.TwentyDollarCount + money2.TwentyDollarCount);
     }
 
+    public static Money operator *(Money money, int multiplier)
+    {
+        return new Money(
+            money.OneCentCount * multiplier,
+            money.TenCentCount * multiplier,
+            money.QuarterCentCount * multiplier,
+            money.OneDollarCount * multiplier,
+            money.FiveDollarCount * multiplier,
+            money.TwentyDollarCount * multiplier);
+    }
+
     public static Money operator -(Money money1, Money money2)
     {
         return new Money(
@@ -98,5 +109,29 @@ public sealed class Money : ValueObject<Money>
             hashCode = (hashCode * 397) ^ TwentyDollarCount;
             return hashCode;
         }
+    }
+
+    public Money Allocate(decimal moneyInTransaction)
+    {
+        int twentyDollarCount = Math.Min((int)(moneyInTransaction / 20), TwentyDollarCount);
+        moneyInTransaction -= twentyDollarCount * 20;
+        int fiveDollarCount = Math.Min((int)(moneyInTransaction / 5), FiveDollarCount);
+        moneyInTransaction -= fiveDollarCount * 5;
+        int oneDollarCount = Math.Min((int)moneyInTransaction, OneDollarCount);
+        moneyInTransaction -= oneDollarCount;
+        int quarterCentCount = Math.Min((int)(moneyInTransaction / 0.25m), QuarterCentCount);
+        moneyInTransaction -= quarterCentCount * 0.25m;
+        int tenCentCount = Math.Min((int)(moneyInTransaction / 0.10m), TenCentCount);
+        moneyInTransaction -= tenCentCount * 0.10m;
+        int oneCentCount = Math.Min((int)(moneyInTransaction / 0.01m), OneCentCount);
+        moneyInTransaction -= oneCentCount * 0.01m;
+
+        return new Money(
+            oneCentCount,
+            tenCentCount,
+            quarterCentCount,
+            oneDollarCount,
+            fiveDollarCount,
+            twentyDollarCount);
     }
 }

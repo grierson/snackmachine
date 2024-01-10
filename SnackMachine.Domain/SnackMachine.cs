@@ -1,9 +1,14 @@
 ﻿namespace SnackMachine.Domain;
 
-public sealed class SnackMachine : Entity
+public sealed class SnackMachine : AggregateRoot
 {
     public Money MoneyInside { get; private set; } = Money.None;
-    public Money MoneyInTransaction { get; private set; } = Money.None;
+    public decimal MoneyInTransaction { get; private set; } = 0;
+    public List<Slot> Slots { get; private set; } = new List<Slot>{
+        new Slot(1),
+        new Slot(2),
+        new Slot(3)
+    };
 
     public void InsertMoney(Money money)
     {
@@ -20,17 +25,55 @@ public sealed class SnackMachine : Entity
         if (demominations.Contains(money) == false)
             throw new InvalidOperationException();
 
-        MoneyInTransaction += money;
+        MoneyInTransaction += money.Amount;
+        MoneyInside += money;
     }
 
     public void ReturnMoney()
     {
-        MoneyInTransaction = Money.None;
+        Money MoneyToReturn = MoneyInside.Allocate(MoneyInTransaction);
+        MoneyInside -= MoneyToReturn;
+        MoneyInTransaction = 0;
     }
 
-    public void BuySnack()
+    private Slot GetSlot(int position)
     {
-        MoneyInside += MoneyInTransaction;
-        MoneyInTransaction = Money.None;
+        return Slots.Single(x => x.Position == position);
+    }
+
+    public void BuySnack(int position)
+    {
+        Slot slot = GetSlot(position);
+
+        if (slot.SnackPile.Price > MoneyInTransaction)
+            throw new InvalidOperationException();
+
+        slot.SnackPile = slot.SnackPile.SubtractOne();
+
+        Money change = MoneyInside.Allocate(MoneyInTransaction - slot.SnackPile.Price);
+
+        if (change.Amount < MoneyInTransaction - slot.SnackPile.Price)
+            throw new InvalidOperationException();
+
+        MoneyInside -= change;
+
+        MoneyInTransaction = 0;
+    }
+
+    public SnackPile GetSnackPile(int position)
+    {
+        var slot = Slots.Single(x => x.Position == position);
+        return slot.SnackPile;
+    }
+
+    public void LoadSnacks(int position, SnackPile snackPile)
+    {
+        var slot = Slots.Single(x => x.Position == position);
+        slot.SnackPile = snackPile;
+    }
+
+    public void LoadMoney(Money money)
+    {
+        MoneyInside += money;
     }
 }
